@@ -9,9 +9,27 @@
 
 
 import json
-import util
 from urllib.parse import quote
 from PyQt5 import QtCore, QtGui, QtWidgets
+import base64
+import hashlib
+from Crypto.Cipher import AES
+from Crypto import Random
+
+ 
+BLOCK_SIZE = 16
+pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * chr(BLOCK_SIZE - len(s) % BLOCK_SIZE)
+unpad = lambda s: s[:-ord(s[len(s) - 1:])]
+ 
+secret_key = 'alongsecrectmightbesafe'
+ 
+def encrypt(raw : str, secret_key : str):
+    private_key = hashlib.sha256(secret_key.encode("utf-8")).digest()
+    raw = pad(raw)
+    iv = Random.new().read(AES.block_size)
+    cipher = AES.new(private_key, AES.MODE_CBC, iv)
+    return base64.b64encode(iv + cipher.encrypt(raw.encode('utf-8')))
+ 
 
 
 class Ui_MainWindow(object):
@@ -84,7 +102,7 @@ class Ui_MainWindow(object):
             'arg': self.textEdit.toPlainText()
         }
         info_str = json.dumps(info)
-        info_encoded = util.encrypt(info_str, util.secret_key)
+        info_encoded = encrypt(info_str, secret_key)
         info_encoded_str = info_encoded.decode('ascii')
         info_quoted = quote(info_encoded_str)
         self.textEdit_2.setPlainText('https://gateway.kmfls.design/gateway?sig=' + info_quoted)
